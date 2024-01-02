@@ -43,9 +43,6 @@ def launch_setup(context):
 		launch_arguments={'use_sim_time': use_sim_time}.items()
 	)
 
-
-
-
 	cartographer = IncludeLaunchDescription(
 		PythonLaunchDescriptionSource(
 			os.path.join(pkg_share_dir, 'launch', 'cartographer.launch.py')
@@ -81,10 +78,6 @@ def launch_setup(context):
 								 {'node_names': ['amcl', 'map_server']}])
 
 
-
-
-
-
 	referee_node = Node(
 		package='project',
 		executable='cargo_tracker.py',
@@ -101,7 +94,7 @@ def launch_setup(context):
 		parameters=[{'use_sim_time': use_sim_time}],
 		output='log')
 
-	return [gzserver_cmd, gzclient_cmd, robot_state_publisher, referee_node]
+	return [gzserver_cmd, gzclient_cmd, robot_state_publisher, rviz, referee_node, cartographer]
 
 def generate_launch_description():
 	# Argumments Declaration
