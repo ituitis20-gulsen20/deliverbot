@@ -101,7 +101,7 @@ def launch_setup(context):
 		parameters=[{'use_sim_time': use_sim_time}],
 		output='log')
 
-	return [gzserver_cmd, gzclient_cmd, robot_state_publisher, referee_node]
+	return [gzserver_cmd, gzclient_cmd, robot_state_publisher, cartographer, nav2, amcl, lifecycle, referee_node, rviz]
 
 def generate_launch_description():
 	# Argumments Declaration
