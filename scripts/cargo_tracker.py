@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 import rclpy
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Pose, PoseArray
 from rclpy.node import Node
+from tf2_ros.transform_listener import TransformListener
+from tf2_ros.buffer import Buffer
 from tf2_ros import TransformException
 import math
 from std_msgs.msg import String
@@ -16,6 +19,11 @@ def euler_from_quaternion(x, y, z, w):
 
 class CargoTracker(Node):
 	def __init__(self):
+		super().__init__('cargo_tracker')
+
+		self.tf_buffer = Buffer()
+		self.tf_listener = TransformListener(self.tf_buffer, self)
+	
 		# self.subscription_map = self.create_subscription(OccupancyGrid, '/map', self.map_callback, 10)
 		self.subscription_controller = self.create_subscription(String, '/tracker', self.controller_message_callback, 10)
 		self.subscription_odom = self.create_subscription(Odometry, '/odom', self.odom_callback, 10)
@@ -64,6 +72,8 @@ class CargoTracker(Node):
 		self.pose_publisher.publish(pose)
 		waypoints = None
 
+		# self.get_logger().info(f'Robot x = {self.robotX_tf}, y = {self.robotY_tf}, yaw = {self.robot_yaw}')
+
 		if self.carried_cargo == -1:
 			for i in range(len(self.cargo_locations)):
 				if self.goal_dist(robotX, robotY, self.cargo_locations[i][0][0], self.cargo_locations[i][0][1]) < self.distance_threshold:
@@ -71,6 +81,7 @@ class CargoTracker(Node):
 					path = [[self.robotX_tf, self.robotY_tf], [self.cargo_locations[i][1][0], self.cargo_locations[i][1][1]]]
 					route = self.points_to_posearray(path)
 					self.waypoint_publisher.publish(route)
+
 		else:
 			if self.goal_dist(robotX, robotY, self.cargo_locations[self.carried_cargo][1][0],
 								self.cargo_locations[self.carried_cargo][1][1]) < self.distance_threshold:
@@ -83,6 +94,7 @@ class CargoTracker(Node):
 					cargo_locations.append(self.cargo_locations[i][1])
 				route = self.points_to_posearray(cargo_locations)
 				self.next_point_publisher.publish(route)
+				self.get_logger().info(f'Route {cargo_locations}')
 
 
 	def points_to_posearray(self, waypoints):
@@ -109,6 +121,7 @@ class CargoTracker(Node):
 				path = [[self.robotX_tf, self.robotY_tf],
 						[self.cargo_locations[self.carried_cargo][1][0], self.cargo_locations[self.carried_cargo][1][1]]]
 				route = self.points_to_posearray(path)
+				self.get_logger().info(f'Route {cargo_locations}')
 				self.waypoint_publisher.publish(route)
 			else:
 				cargo_locations = [[self.robotX_tf, self.robotY_tf]]
@@ -117,6 +130,7 @@ class CargoTracker(Node):
 					cargo_locations.append(self.cargo_locations[i][1])
 				route = self.points_to_posearray(cargo_locations)
 				self.next_point_publisher.publish(route)
+				self.get_logger().info(f'Route {cargo_locations}')
 
 def main(args=None):
 	rclpy.init(args=args)

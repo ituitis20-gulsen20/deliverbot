@@ -80,12 +80,6 @@ def launch_setup(context):
 								 {'autostart': True},
 								 {'node_names': ['amcl', 'map_server']}])
 
-
-
-
-
-
-
 	rviz = Node(
 		package='rviz2',
 		node_executable='rviz2',

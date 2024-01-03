@@ -59,6 +59,21 @@ class PathGenerator(Node):
 							break
 		return map
 
+	def waypoints_to_route(self, waypoints):
+		route = PoseArray()
+		for i in range(len(waypoints)):
+			pose = Pose()
+			pose.position.x = float(waypoints[i][0]) * self.resolution + self.origin_x
+			pose.position.y = float(waypoints[i][1]) * self.resolution + self.origin_y
+			route.poses.append(pose)
+		route.header.frame_id = "map"
+		stamp = self.get_clock().now()
+		route.header.stamp = Time()
+		route.header.stamp.sec = stamp.nanoseconds // 10 ** 9
+		route.header.stamp.nanosec = stamp.nanoseconds % 10 ** 9
+
+		return route
+
 	def waypoint_callback(self, msg):
 		if self.is_waypoint_running:
 			return
@@ -140,13 +155,21 @@ class PathGenerator(Node):
 	def djikstra(self, start_index, locations):
 		visited = [[False for i in range(self.width)] for j in range(self.height)]
 		distances = [math.inf for i in range(len(locations))]
+
+		print(len(distances))
+		print(start_index)
+		if start_index >= len(locations):
+			return distances
 		distances[start_index] = 0
 		queue = [(0.0, locations[start_index])]
 		heapq.heapify(queue)
 
 		while queue:
 			current_distance, current_location = heapq.heappop(queue)
-			print(current_location)
+			#print("Visited shape:", len(visited), len(visited[0]))
+			#print(current_location)
+			if len(visited) < current_location[0] or len(visited[0]) < current_location[1]:
+				continue
 			if visited[current_location[0]][current_location[1]]:
 				continue
 			visited[current_location[0]][current_location[1]] = True
@@ -224,6 +247,13 @@ class PathGenerator(Node):
 		visited = [[False for i in range(self.width)] for j in range(self.height)]
 		came_from = [[None for i in range(self.width)] for j in range(self.height)]
 		cost_so_far = [[math.inf for i in range(self.width)] for j in range(self.height)]
+		#print("start: ", start)
+		#print(len(cost_so_far))
+		#print(len(cost_so_far[0]))
+		if start[0] >= len(cost_so_far):
+			start[0] = len(cost_so_far) - 1
+		if start[1] >= len(cost_so_far[0]):
+			start[1] = len(cost_so_far[0]) - 1
 		cost_so_far[start[0]][start[1]] = 0
 		queue = [(0.0, start)]
 		heapq.heapify(queue)
@@ -242,6 +272,9 @@ class PathGenerator(Node):
 					neighbor = [current_location[0] + i - 1, current_location[1] + j - 1]
 					if neighbor[0] < 0 or neighbor[0] >= self.height or neighbor[1] < 0 or neighbor[1] >= self.width:
 						continue
+
+					if len(self.map) <= neighbor[0] * self.width + neighbor[1]:
+						continue
 					if self.map[neighbor[0] * self.width + neighbor[1]] >= 50:
 						continue
 					if visited[neighbor[0]][neighbor[1]]:
@@ -256,7 +289,7 @@ class PathGenerator(Node):
 
 		path = []
 		current_location = goal
-		while current_location != start and came_from[current_location[0]][current_location[1]] is not None:
+		while current_location != start and len(came_from) > current_location[0] and len(came_from[0]) > current_location[1]:
 			path.append(current_location)
 			current_location = came_from[current_location[0]][current_location[1]]
 		path.reverse()
