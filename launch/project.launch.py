@@ -85,12 +85,6 @@ def launch_setup(context):
 
 
 
-	referee_node = Node(
-		package='project',
-		executable='cargo_tracker.py',
-		name='tracker',
-		output='screen',
-	)
 
 	rviz = Node(
 		package='rviz2',
@@ -101,15 +95,10 @@ def launch_setup(context):
 		parameters=[{'use_sim_time': use_sim_time}],
 		output='log')
 
-	return [gzserver_cmd, gzclient_cmd, robot_state_publisher, cartographer, nav2, amcl, lifecycle, referee_node, rviz]
+	return [gzserver_cmd, gzclient_cmd, robot_state_publisher, cartographer, nav2, amcl, lifecycle, rviz]
 
 def generate_launch_description():
-	# Argumments Declaration
-
-	# Launch Description Declaration
 	ld = LaunchDescription()
-
-	# Add Actions
 
 	ld.add_action(OpaqueFunction(function=launch_setup))
 
