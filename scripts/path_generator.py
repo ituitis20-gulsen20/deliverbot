@@ -23,6 +23,10 @@ class PathGenerator(Node):
 		self.origin_y = 0.0
 		self.is_next_point_running = False
 		self.is_waypoint_running = False
+		self.minimum_x = 0.0
+		self.maximum_x = 6.0
+		self.minimum_y = -2.0
+		self.maximum_y = 4.0
 
 	def map_callback(self, msg):
 		self.width = msg.info.width
@@ -33,6 +37,32 @@ class PathGenerator(Node):
 		print(self.width, self.height, self.resolution, self.origin_x, self.origin_y)
 		self.map = [msg.data[i:i+self.width] for i in range(0, self.width * self.height, self.width)]
 		self.map = self.generate_cost_map(self.map)
+		self.map = [[i for i in j] for j in self.map]
+		new_map = []
+		minimum_coords = self.coord_to_index([self.minimum_x, self.minimum_y], False)
+		if minimum_coords[0] < 0:
+			new_map = [[0 for i in range(self.width)] for j in range(abs(minimum_coords[0]))]
+			for i in range(len(self.map)):
+				new_map[i] += self.map[i]
+			self.map = new_map
+			self.height += abs(minimum_coords[0])
+			self.origin_x = self.minimum_x
+		if minimum_coords[1] < 0:
+			for i in self.map:
+				new_map.append([0 for j in range(abs(minimum_coords[1]))] + i)
+			self.map = new_map
+			self.width += abs(minimum_coords[1])
+			self.origin_y = self.minimum_y
+		maximum_coords = self.coord_to_index([self.maximum_x, self.maximum_y], False)
+		if maximum_coords[0] >= self.height:
+			new_map = [[0 for i in range(self.width)] for j in range(maximum_coords[0] - self.height + 1)]
+			self.map += new_map
+			self.height += maximum_coords[0] - self.height + 1
+		if maximum_coords[1] >= self.width:
+			for i in self.map:
+				i += [0 for j in range(maximum_coords[1] - self.width + 1)]
+			self.width += maximum_coords[1] - self.width + 1
+
 
 	def generate_cost_map(self, map):
 		robot_radius = 0.15
@@ -136,8 +166,15 @@ class PathGenerator(Node):
 
 		self.is_next_point_running = False
 
-	def coord_to_index(self, x):
-		return [int((x[0]-self.origin_x) / self.resolution), int((x[1]-self.origin_y) / self.resolution)]
+	def coord_to_index(self, x, check_bounds = True):
+		return_value = [int((x[0]-self.origin_x) / self.resolution), int((x[1]-self.origin_y) / self.resolution)]
+		if check_bounds and (return_value[0] < 0 or return_value[0] >= self.height or return_value[1] < 0 or return_value[1] >= self.width):
+			print("coord_to_index: ", return_value)
+			print("x: ", x)
+			print("origin_x: ", self.origin_x)
+			print("origin_y: ", self.origin_y)
+			raise Exception("coord_to_index: out of bounds")
+		return return_value
 
 	def generate_adj_matrix(self, robot_location, cargo_locations):
 		adj_matrix = [[0 for i in range(len(cargo_locations) + 1)] for j in range(len(cargo_locations) + 1)]
@@ -180,7 +217,7 @@ class PathGenerator(Node):
 					neighbor = [current_location[0] + i - 1, current_location[1] + j - 1]
 					if neighbor[0] < 0 or neighbor[0] >= self.height or neighbor[1] < 0 or neighbor[1] >= self.width:
 						continue
-					if self.map[neighbor[0] * self.width + neighbor[1]] >= 50:
+					if self.map[neighbor[0]][neighbor[1]] >= 50:
 						continue
 					if visited[neighbor[0]][neighbor[1]]:
 						continue
@@ -225,7 +262,7 @@ class PathGenerator(Node):
 		err = dx - dy
 
 		while True:
-			if map[y1][x1] >= 50:
+			if self.map[x1][y1] >= 50:
 				return False
 
 			if x1 == x2 and y1 == y2:
@@ -257,8 +294,9 @@ class PathGenerator(Node):
 		cost_so_far[start[0]][start[1]] = 0
 		queue = [(0.0, start)]
 		heapq.heapify(queue)
+		current_location = start
 
-		while queue:
+		while len(queue) > 0:
 			current_distance, current_location = heapq.heappop(queue)
 			if current_location[0] < 0 or current_location[0] >= self.height or current_location[1] < 0 or current_location[1] >= self.width:
 				continue
@@ -273,9 +311,7 @@ class PathGenerator(Node):
 					if neighbor[0] < 0 or neighbor[0] >= self.height or neighbor[1] < 0 or neighbor[1] >= self.width:
 						continue
 
-					if len(self.map) <= neighbor[0] * self.width + neighbor[1]:
-						continue
-					if self.map[neighbor[0] * self.width + neighbor[1]] >= 50:
+					if self.map[neighbor[0]][neighbor[1]] >= 50:
 						continue
 					if visited[neighbor[0]][neighbor[1]]:
 						continue
@@ -289,6 +325,8 @@ class PathGenerator(Node):
 
 		path = []
 		current_location = goal
+		print(came_from)
+		print(current_location)
 		while current_location != start and len(came_from) > current_location[0] and len(came_from[0]) > current_location[1]:
 			path.append(current_location)
 			current_location = came_from[current_location[0]][current_location[1]]

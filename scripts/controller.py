@@ -47,10 +47,12 @@ class Controller(Node):
 			self.route.pop(0)
 			self.goal["x"] = self.route[0].position.x
 			self.goal["y"] = self.route[0].position.y
+			print(self.goal)
 	def route_callback(self, msg):
 		self.route = msg.poses
 		self.goal["x"] = self.route[0].position.x
 		self.goal["y"] = self.route[0].position.y
+		print(self.goal)
 
 	def scan_callback(self, msg):
 		scans = msg.ranges
@@ -106,13 +108,16 @@ class Controller(Node):
 		angle_to_goal = self.calc_angle_to_goal(x, y)
 
 		twist_msg.linear.x = self.speed - self.speed * abs(angle_to_goal / (math.pi - 0.4))
-		twist_msg.angular.z = angle_to_goal * 1.6
+		twist_msg.angular.z = angle_to_goal * 0.8
 
 		if self.directions["front"] < 0.9:
 			twist_msg.linear.x *= 0.4
 
 		if self.directions["front"] < 0.4:
 			twist_msg.linear.x *= 0.4
+
+		if self.directions["front"] < 0.3:
+			twist_msg.linear.x = 0.0
 
 		self.publish_twist.publish(twist_msg)
 

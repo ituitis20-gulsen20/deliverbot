@@ -33,8 +33,11 @@ class CargoTracker(Node):
 
 		# [[Source: [int, int], Destination: [int, int]]]
 		self.cargo_locations = [
-			[[0, 0], [1, 1]],
-			[[2, 2], [3, 3]]
+			[[5.5, 0.6], [5.5, 2.0]],
+			[[4, 2.5], [1.7, 1.7]],
+			[[3.6, -1.7], [2.3, -1.7]],
+			[[0.3, -1.7], [0.3, 0.5]],
+			[[2.0, 3.0], [3.0, 3.0]]
 		]
 
 		self.robotX_tf = 0
@@ -121,7 +124,7 @@ class CargoTracker(Node):
 				path = [[self.robotX_tf, self.robotY_tf],
 						[self.cargo_locations[self.carried_cargo][1][0], self.cargo_locations[self.carried_cargo][1][1]]]
 				route = self.points_to_posearray(path)
-				self.get_logger().info(f'Route {cargo_locations}')
+				self.get_logger().info(f'Route {path}')
 				self.waypoint_publisher.publish(route)
 			else:
 				cargo_locations = [[self.robotX_tf, self.robotY_tf]]
