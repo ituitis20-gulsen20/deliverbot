@@ -30,6 +30,7 @@ class PathGenerator(Node):
 		self.resolution = msg.info.resolution
 		self.origin_x = msg.info.origin.position.x
 		self.origin_y = msg.info.origin.position.y
+		print(self.width, self.height, self.resolution, self.origin_x, self.origin_y)
 		self.map = [msg.data[i:i+self.width] for i in range(0, self.width * self.height, self.width)]
 		self.map = self.generate_cost_map(self.map)
 
@@ -79,6 +80,8 @@ class PathGenerator(Node):
 		self.is_next_point_running = True
 		print("next_point_callback")
 		if self.map is None:
+			self.is_next_point_running = False
+			print("map is none")
 			return
 		poses = msg.poses
 
@@ -93,7 +96,7 @@ class PathGenerator(Node):
 			cargo_locations.append(cargo_location)
 
 		adj_matrix = self.generate_adj_matrix([poses[0].position.x, poses[0].position.y], cargo_locations)
-
+		print("adj matrix generated")
 		shortest_path = []
 		shortest_path_length = math.inf
 
@@ -109,10 +112,10 @@ class PathGenerator(Node):
 				shortest_path_length = path_length
 
 		next_point = shortest_path[1]
-
+		print("next point: ", next_point)
 		waypoints = self.generate_waypoints(poses[0].position.x, poses[0].position.y, poses[2*next_point+1].position.x,
 											poses[2*next_point+1].position.y)
-
+		print("waypoints generated")
 		route = self.waypoints_to_route(waypoints)
 		self.route_publisher.publish(route)
 
@@ -128,7 +131,7 @@ class PathGenerator(Node):
 		adj_matrix[0][:] = self.djikstra(0, points)
 
 		for i in range(len(cargo_locations)):
-			points = [j[0] for j in cargo_locations[:i]] + [cargo_locations[i][1]] + [j[0] for j in cargo_locations[i+1:]]
+			points = [self.coord_to_index(j[0]) for j in cargo_locations[:i]] + [self.coord_to_index(cargo_locations[i][1])] + [self.coord_to_index(j[0]) for j in cargo_locations[i+1:]]
 			adj_matrix[i+1][1:] = self.djikstra(i+1, points)
 			adj_matrix[i+1][0] = math.inf
 
@@ -143,6 +146,7 @@ class PathGenerator(Node):
 
 		while queue:
 			current_distance, current_location = heapq.heappop(queue)
+			print(current_location)
 			if visited[current_location[0]][current_location[1]]:
 				continue
 			visited[current_location[0]][current_location[1]] = True
@@ -226,6 +230,8 @@ class PathGenerator(Node):
 
 		while queue:
 			current_distance, current_location = heapq.heappop(queue)
+			if current_location[0] < 0 or current_location[0] >= self.height or current_location[1] < 0 or current_location[1] >= self.width:
+				continue
 			if visited[current_location[0]][current_location[1]]:
 				continue
 			visited[current_location[0]][current_location[1]] = True
@@ -243,12 +249,14 @@ class PathGenerator(Node):
 					new_cost = cost_so_far[current_location[0]][current_location[1]] + math.sqrt((neighbor[0] - current_location[0]) ** 2 + (neighbor[1] - current_location[1]) ** 2)
 					if new_cost < cost_so_far[neighbor[0]][neighbor[1]]:
 						cost_so_far[neighbor[0]][neighbor[1]] = new_cost
+						if current_location[0] < 0 or neighbor[0] >= self.height or neighbor[1] < 0 or neighbor[1] >= self.width:
+							continue
 						heapq.heappush(queue, (new_cost + math.sqrt((neighbor[0] - goal[0]) ** 2 + (neighbor[1] - goal[1]) ** 2), neighbor))
 						came_from[neighbor[0]][neighbor[1]] = current_location
 
 		path = []
 		current_location = goal
-		while current_location != start:
+		while current_location != start and came_from[current_location[0]][current_location[1]] is not None:
 			path.append(current_location)
 			current_location = came_from[current_location[0]][current_location[1]]
 		path.reverse()
