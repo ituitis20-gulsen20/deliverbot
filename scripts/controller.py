@@ -36,6 +36,11 @@ class Controller(Node):
 		self.robotX = msg.position.x
 		self.robotY = msg.position.y
 		self.robot_yaw = msg.orientation.z
+		if self.route is None:
+			self.goal["x"] = self.robotX
+			self.goal["y"] = self.robotY
+			self.request_new_route()
+			return
 		if self.route is not None and len(self.route) > 0 and self.goal_dist(
 								self.robotX, self.robotY, self.route[0].position.x,
 								self.route[0].position.y) < self.distance_threshold:
@@ -73,6 +78,7 @@ class Controller(Node):
 	def request_new_route(self):
 		msg = String()
 		msg.data = "new_route"
+		print("requesting new route")
 		self.publish_string.publish(msg)
 
 	def goal_dist(self, x, y, x_goal, y_goal):
@@ -93,6 +99,8 @@ class Controller(Node):
 		return angle_to_goal
 
 	def go_to_goal(self, x, y):
+		if self.route is None:
+			return
 		twist_msg = Twist()
 
 		angle_to_goal = self.calc_angle_to_goal(x, y)
